@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://Edge.gd" type="Script" id=1]
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform float hovered = 0.0;
+
+void fragment(){
+	COLOR.rgb *= 0.5 - pow( abs(0.5-UV.y) , 1.5 );
+	COLOR.rgb += vec3(0.4,0.4,0.4)*hovered;
+}"
+
+[sub_resource type="ShaderMaterial" id=2]
+shader = SubResource( 1 )
+shader_param/hovered = 0.0
+
+[node name="Edge" type="ColorRect"]
+show_behind_parent = true
+material = SubResource( 2 )
+margin_right = 100.0
+margin_bottom = 5.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+[connection signal="mouse_entered" from="." to="." method="_on_Edge_mouse_entered"]
+[connection signal="mouse_exited" from="." to="." method="_on_Edge_mouse_exited"]
