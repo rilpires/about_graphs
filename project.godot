@@ -28,7 +28,7 @@ _global_script_class_icons={
 
 config/name="about_graphs_godot"
 run/main_scene="res://Main.tscn"
-config/icon="res://icon.png"
+config/icon="res://circle.png"
 
 [autoload]
 
