@@ -52,4 +52,7 @@ func _control_preview_item_rect_changed(prev:Control,offset:Vector2):
 		click_toggling = false
 	raise()
 
+func _exit_tree():
+	if get_parent().hovered_vertex == self:
+		get_parent().hovered_vertex = null
 

@@ -4,25 +4,43 @@ extends Control
 export (PackedScene) var vertex_res
 export (PackedScene) var edge_res
 export (Font) var font
-
 var clicked_vertex = null setget setClickedVertex
 var hovered_vertex = null setget setHoveredVertex
-var available_vertex_names = "ABCDEFGHIJKLMNOPQRSTUVWXZabcdefghijklmnopqrstuvwxyz"
+var available_vertex_names = []
+var available_component_names = []
+var available_component_colors = [Color.red,Color.blue,Color.green,Color.yellow]
+
 var next_vertex_index = 0
-var edge_dict = {}
-var dijkstra_dict = {}
-var eccentricities = {}
-var radius = null
-var diameter = null
-var wiener_index = null
-var fully_connected = false
+var next_component_index = 0
+
+var edge_dict = {} # vertex -> vertex
+var component_dict = {}  # vertex -> component
+var dijkstra_dict = {} # [vertex,vertex] -> distance 
+var eccentricities = {} # vertex -> eccentricity
+var radius = {} # component -> radius
+var diameter = {} # component -> diameter
+var wiener_index = {} # component -> wiender_index
 
 signal calculations_done
+signal hovered_vertex_changed
 
 func _init():
 	var label = Label.new()
 	font = label.get_font("font").duplicate(true)
 	label.free()
+	
+	available_vertex_names += ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
+	var alphabet_size = available_vertex_names.size()
+	for i in [1,2,3]:
+		for j in range(0,alphabet_size):
+			available_vertex_names.push_back( available_vertex_names[j]+str(i) )
+	available_component_names = available_vertex_names.duplicate()
+	for i in range(0,available_component_names.size()):
+		available_component_names[i] = "G" + available_component_names[i].to_lower()
+	for i in range(0,10):
+		var random_color = Color(1,0,0)
+		random_color.h = rand_range(0,1)
+		available_component_colors.push_back( random_color )
 
 func _gui_input(event):
 	if event is InputEventMouseButton:
@@ -38,12 +56,13 @@ func _gui_input(event):
 func setHoveredVertex(new_val):
 	if(hovered_vertex):
 		hovered_vertex.set_process_input(false)
-		hovered_vertex.modulate = Color(0.5,0.5,0.5)
+		hovered_vertex.modulate = Color(0.7,0.7,0.7)
 	hovered_vertex=new_val
 	if(hovered_vertex):
 		hovered_vertex.set_process_input(true)
 		hovered_vertex.modulate = Color(1.0,1.0,1.0)
 	update()
+	emit_signal("hovered_vertex_changed")
 
 func setClickedVertex(new_val):
 	if( clicked_vertex ):
@@ -57,14 +76,17 @@ func setClickedVertex(new_val):
 
 func getNextVertexName() -> String:
 	next_vertex_index += 1
-	return available_vertex_names.substr( next_vertex_index-1 , 1 )
+	return available_vertex_names[ next_vertex_index-1 ]
+func getNextComponentName() -> String:
+	next_vertex_index += 1
+	return available_vertex_names[ next_vertex_index-1 ]
 
 func addVertex( global_pos : Vector2 ) -> GraphVertex:
 	var new_inst = vertex_res.instance()
 	var new_vertex_name = getNextVertexName()
+	new_inst.name = new_vertex_name
 	add_child( new_inst )
 	new_inst.rect_global_position = global_pos - new_inst.rect_size*0.5
-	new_inst.name = new_vertex_name
 	edge_dict[new_vertex_name] = []
 	return new_inst
 
@@ -120,7 +142,8 @@ func removeEdge( vertex1 , vertex2 ):
 	edge_inst.queue_free()
 
 func getCloseVertex( vertex ) -> Array:
-	var ret = [] 
+	var ret = []
+	if( vertex is String ): vertex = get_node(vertex)
 	for edge in edge_dict[vertex.name]:
 		if edge.vertex1==vertex:
 			ret.append(edge.vertex2)
@@ -130,6 +153,7 @@ func getCloseVertex( vertex ) -> Array:
 
 func updateCalculations() -> void:
 	updateDijkstraDict()
+	updateComponents()
 	updateEccentricities()
 	updateWienerIndex()
 	emit_signal("calculations_done")
@@ -137,30 +161,29 @@ func updateCalculations() -> void:
 # Also updates radius & diameter
 func updateEccentricities():
 	eccentricities = {}
-	var all_vertex_names = dijkstra_dict.keys()
-	
-	if( fully_connected ):
-		for v1 in all_vertex_names:
-			eccentricities[v1] = dijkstra_dict[v1].values().max()
-		radius = eccentricities.values().min()
-		diameter = eccentricities.values().max()
-	else:
-		for v1 in all_vertex_names:
-			eccentricities[v1] = null
-		radius = null
-		diameter = null
+	radius = {}
+	diameter = {}
+	for component_index in range( 0 , next_component_index ):
+		var sub_dijkstra = generate_sub_dijkstra(component_index)
+		var eccentricities_so_far = []
+		for v_name in sub_dijkstra.keys():
+			var eccentricity = sub_dijkstra[v_name].values().max()
+			eccentricities[v_name] = eccentricity
+			eccentricities_so_far.push_back(eccentricity)
+		radius[component_index] = eccentricities_so_far.min()
+		diameter[component_index] = eccentricities_so_far.max()
 
 func updateWienerIndex():
-	if( fully_connected ):
-		wiener_index = 0
-		var all_vertex_names = dijkstra_dict.keys()
+	wiener_index = {}
+	for component_index in range( 0 , next_component_index ):
+		wiener_index[component_index] = 0
+		var sub_dijkstra = generate_sub_dijkstra(component_index)
+		var all_vertex_names = sub_dijkstra.keys()
 		for v1 in all_vertex_names:
 			for v2 in all_vertex_names:
 				if(v1>=v2):continue
-				wiener_index += dijkstra_dict[v1][v2]
-		wiener_index *= 2.0
-	else:
-		wiener_index = null
+				wiener_index[component_index] += sub_dijkstra[v1][v2]
+		wiener_index[component_index] *= 2.0
 
 func updateDijkstraDict() -> void :
 	var all_vertex_names = edge_dict.keys().duplicate()
@@ -195,14 +218,44 @@ func updateDijkstraDict() -> void :
 								break
 		if(got_updated==false):
 			break
+
+func updateComponents():
+	next_component_index = 0
+	component_dict = {}
+	for v_name in edge_dict.keys():
+		component_dict[v_name] = null
 	
-	fully_connected = true
-	for v1 in all_vertex_names:
-		for v2 in all_vertex_names:
-			if(v1>v2):continue
-			if dijkstra_dict[v1][v2]==null:
-				fully_connected = false
-				return
+	var discovered_queue = []
+	for v_name in component_dict.keys():
+		if( component_dict[v_name]==null ):
+			var current_component_index = next_component_index
+			next_component_index += 1
+			component_dict[v_name] = current_component_index
+			discovered_queue.push_back(v_name)
+			while( discovered_queue.size() ):
+				var next_v_name = discovered_queue.pop_front()
+				for v2_obj in getCloseVertex(next_v_name):
+					var v2_name = v2_obj.name
+					if( component_dict[v2_name] == null ):
+						component_dict[v2_name] = current_component_index
+						discovered_queue.push_back(v2_name)
+	for v_name in edge_dict.keys():
+		get_node(v_name).self_modulate = available_component_colors[ component_dict[v_name] % available_component_colors.size() ]
+
+func generate_sub_dijkstra( component_index ) -> Dictionary:
+	if( component_index==0 and next_component_index==1 ): return dijkstra_dict
+	var ret = {}
+	var component_vertex = []
+	for v_name in edge_dict.keys():
+		if component_dict[v_name]==component_index:
+			component_vertex.push_back(v_name)
+	for v_name in component_vertex:
+		ret[v_name] = {}
+	for v1 in component_vertex:
+		for v2 in component_vertex:
+			ret[v1][v2] = dijkstra_dict[v1][v2]
+			ret[v2][v1] = ret[v1][v2]
+	return ret
 
 func _draw():
 	var info_panel = get_node("../InfoPanel")
