@@ -1,8 +1,68 @@
-[gd_scene load_steps=4 format=2]
+[gd_scene load_steps=16 format=2]
 
 [ext_resource path="res://Main.gd" type="Script" id=1]
-[ext_resource path="res://Graph.tscn" type="PackedScene" id=2]
-[ext_resource path="res://GraphInfoPanel.tscn" type="PackedScene" id=3]
+[ext_resource path="res://mouse_left.png" type="Texture" id=2]
+[ext_resource path="res://mouse_right.png" type="Texture" id=3]
+[ext_resource path="res://Graph.tscn" type="PackedScene" id=4]
+[ext_resource path="res://GraphInfoPanel.tscn" type="PackedScene" id=5]
+[ext_resource path="res://whitebox.png" type="Texture" id=6]
+[ext_resource path="res://ToolBar.gd" type="Script" id=7]
+
+[sub_resource type="GDScript" id=3]
+script/source = "extends Control
+
+func _on_HelpTips_mouse_entered():
+	$AnimationPlayer.play(\"appearing\")
+
+
+func _on_HelpTips_mouse_exited():
+	$AnimationPlayer.play(\"disappearing\")
+"
+
+[sub_resource type="Animation" id=4]
+resource_name = "appearing"
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 1 ),
+"transitions": PoolRealArray( 0.0796601, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 0 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[sub_resource type="Animation" id=5]
+resource_name = "disappearing"
+length = 3.0
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 3 ),
+"transitions": PoolRealArray( 4.92458, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 1, 1, 1, 0.137255 ) ]
+}
+
+[sub_resource type="InputEventKey" id=6]
+scancode = 49
+
+[sub_resource type="ShortCut" id=2]
+shortcut = SubResource( 6 )
+
+[sub_resource type="ButtonGroup" id=9]
+
+[sub_resource type="InputEventKey" id=7]
+scancode = 50
+
+[sub_resource type="ShortCut" id=8]
+shortcut = SubResource( 7 )
 
 [node name="TabContainer" type="TabContainer"]
 self_modulate = Color( 1, 1, 1, 0 )
@@ -23,13 +83,101 @@ margin_right = -4.0
 margin_bottom = -4.0
 mouse_filter = 2
 
-[node name="Graph" parent="Simple graph" instance=ExtResource( 2 )]
+[node name="HelpTips" type="Control" parent="Simple graph"]
+editor/display_folded = true
+modulate = Color( 1, 1, 1, 0.137255 )
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -190.0
+margin_top = -14.0
+margin_bottom = 185.0
+mouse_filter = 1
+script = SubResource( 3 )
+
+[node name="left_click" type="TextureRect" parent="Simple graph/HelpTips"]
+margin_right = 48.0
+margin_bottom = 48.0
+mouse_filter = 2
+texture = ExtResource( 2 )
+expand = true
+
+[node name="Label" type="Label" parent="Simple graph/HelpTips/left_click"]
+margin_left = 0.663391
+margin_top = 50.821
+margin_right = 175.663
+margin_bottom = 98.821
+text = "[Create|Drag|Select] vertex
+Create edge"
+
+[node name="right_click" type="TextureRect" parent="Simple graph/HelpTips"]
+margin_top = 106.993
+margin_right = 48.0
+margin_bottom = 154.993
+mouse_filter = 2
+texture = ExtResource( 3 )
+expand = true
+
+[node name="Label" type="Label" parent="Simple graph/HelpTips/right_click"]
+margin_left = 0.663391
+margin_top = 50.821
+margin_right = 87.6634
+margin_bottom = 98.821
+text = "Delete vertex
+Delete edge"
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Simple graph/HelpTips"]
+autoplay = "disappearing"
+anims/appearing = SubResource( 4 )
+anims/disappearing = SubResource( 5 )
+
+[node name="Graph" parent="Simple graph" instance=ExtResource( 4 )]
 mouse_filter = 1
 
-[node name="InfoPanel" parent="Simple graph" instance=ExtResource( 3 )]
+[node name="InfoPanel" parent="Simple graph" instance=ExtResource( 5 )]
 anchor_bottom = 1.0
 margin_left = 0.0
 margin_top = 0.0
 margin_right = 0.0
 margin_bottom = 0.0
 rect_min_size = Vector2( 200, 0 )
+
+[node name="ToolBar" type="NinePatchRect" parent="Simple graph"]
+self_modulate = Color( 0.490196, 0.490196, 0.490196, 1 )
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = 210.0
+margin_top = -63.0
+margin_right = -15.0
+margin_bottom = -11.0
+texture = ExtResource( 6 )
+draw_center = false
+patch_margin_left = 2
+patch_margin_top = 2
+patch_margin_right = 2
+patch_margin_bottom = 2
+script = ExtResource( 7 )
+
+[node name="HBox" type="HBoxContainer" parent="Simple graph/ToolBar"]
+self_modulate = Color( 0.376471, 0.376471, 0.376471, 1 )
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="show_eccentricity" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
+margin_right = 192.0
+margin_bottom = 52.0
+action_mode = 0
+shortcut = SubResource( 2 )
+group = SubResource( 9 )
+text = "Show eccentricity"
+
+[node name="show_centrality" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
+margin_left = 196.0
+margin_right = 373.0
+margin_bottom = 52.0
+action_mode = 0
+shortcut = SubResource( 8 )
+group = SubResource( 9 )
+text = "Show centrality"
+[connection signal="mouse_entered" from="Simple graph/HelpTips" to="Simple graph/HelpTips" method="_on_HelpTips_mouse_entered"]
+[connection signal="mouse_exited" from="Simple graph/HelpTips" to="Simple graph/HelpTips" method="_on_HelpTips_mouse_exited"]

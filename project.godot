@@ -57,6 +57,10 @@ texture={
 "svg/scale": 1.0
 }
 
+[physics]
+
+common/physics_fps=15
+
 [rendering]
 
 quality/driver/driver_name="GLES2"

@@ -55,4 +55,6 @@ func _control_preview_item_rect_changed(prev:Control,offset:Vector2):
 func _exit_tree():
 	if get_parent().hovered_vertex == self:
 		get_parent().hovered_vertex = null
+		if get_parent().clicked_vertex == self:
+			get_parent().clicked_vertex = null
 

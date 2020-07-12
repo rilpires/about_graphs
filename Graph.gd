@@ -8,7 +8,6 @@ var clicked_vertex = null setget setClickedVertex
 var hovered_vertex = null setget setHoveredVertex
 var available_vertex_names = []
 var available_component_names = []
-var available_component_colors = [Color.red,Color.blue,Color.green,Color.yellow]
 
 var next_vertex_index = 0
 var next_component_index = 0
@@ -16,10 +15,14 @@ var next_component_index = 0
 var edge_dict = {} # vertex -> vertex
 var component_dict = {}  # vertex -> component
 var dijkstra_dict = {} # [vertex,vertex] -> distance 
+var sub_dijktras = {} # component -> dijkstra_dict
 var eccentricities = {} # vertex -> eccentricity
+var component_size = {} # component -> size
 var radius = {} # component -> radius
 var diameter = {} # component -> diameter
+var centrality = {} # 
 var wiener_index = {} # component -> wiender_index
+
 
 signal calculations_done
 signal hovered_vertex_changed
@@ -66,7 +69,7 @@ func setHoveredVertex(new_val):
 
 func setClickedVertex(new_val):
 	if( clicked_vertex ):
-		clicked_vertex.remove_child(clicked_vertex.get_child(0))
+		clicked_vertex.remove_child(clicked_vertex.get_node("Particles2D"))
 	clicked_vertex = new_val
 	if( clicked_vertex ):
 		var new_inst = preload("res://VertexParticles.tscn").instance()
@@ -156,6 +159,7 @@ func updateCalculations() -> void:
 	updateComponents()
 	updateEccentricities()
 	updateWienerIndex()
+	updateCentrality()
 	emit_signal("calculations_done")
 
 # Also updates radius & diameter
@@ -164,7 +168,7 @@ func updateEccentricities():
 	radius = {}
 	diameter = {}
 	for component_index in range( 0 , next_component_index ):
-		var sub_dijkstra = generate_sub_dijkstra(component_index)
+		var sub_dijkstra = sub_dijktras[component_index]
 		var eccentricities_so_far = []
 		for v_name in sub_dijkstra.keys():
 			var eccentricity = sub_dijkstra[v_name].values().max()
@@ -177,7 +181,7 @@ func updateWienerIndex():
 	wiener_index = {}
 	for component_index in range( 0 , next_component_index ):
 		wiener_index[component_index] = 0
-		var sub_dijkstra = generate_sub_dijkstra(component_index)
+		var sub_dijkstra = sub_dijktras[component_index]
 		var all_vertex_names = sub_dijkstra.keys()
 		for v1 in all_vertex_names:
 			for v2 in all_vertex_names:
@@ -220,8 +224,11 @@ func updateDijkstraDict() -> void :
 			break
 
 func updateComponents():
-	next_component_index = 0
 	component_dict = {}
+	sub_dijktras = {}
+	component_size = {}
+	next_component_index = 0
+	
 	for v_name in edge_dict.keys():
 		component_dict[v_name] = null
 	
@@ -240,9 +247,28 @@ func updateComponents():
 						component_dict[v2_name] = current_component_index
 						discovered_queue.push_back(v2_name)
 	for v_name in edge_dict.keys():
-		get_node(v_name).self_modulate = available_component_colors[ component_dict[v_name] % available_component_colors.size() ]
+		var component_color = available_component_colors[ component_dict[v_name] % available_component_colors.size() ]
+		get_node(v_name).self_modulate = component_color
+		for edge in edge_dict[v_name]:
+			edge.self_modulate = lerp( Color.white , component_color , 0.4 )
+	
+	for i in range( 0 , next_component_index ):
+		sub_dijktras[i] = _generate_sub_dijkstra(i)
+		component_size[i] = sub_dijktras[i].size()
 
-func generate_sub_dijkstra( component_index ) -> Dictionary:
+func updateCentrality():
+	centrality = {}
+	for c in range(0,next_component_index):
+		for v_name in sub_dijktras[c].keys():
+			var sum = 0.0
+			for d in sub_dijktras[c][v_name].values():
+				sum += d
+			if( sum == 0 ):
+				centrality[v_name] = 0
+			else:
+				centrality[v_name] = (sub_dijktras[c].size()-1) / sum
+
+func _generate_sub_dijkstra( component_index ) -> Dictionary:
 	if( component_index==0 and next_component_index==1 ): return dijkstra_dict
 	var ret = {}
 	var component_vertex = []
@@ -257,17 +283,28 @@ func generate_sub_dijkstra( component_index ) -> Dictionary:
 			ret[v2][v1] = ret[v1][v2]
 	return ret
 
+var available_component_colors = [Color.red,Color.blue,Color.green,Color.yellow,Color.blueviolet,Color.beige,Color.turquoise,Color.aqua,Color.blanchedalmond]
+func getComponentColor( component : int ):
+	return available_component_colors[ component % available_component_colors.size() ]
+
 func _draw():
-	var info_panel = get_node("../InfoPanel")
+	var tool_bar = get_node("../ToolBar")
+	
 	if hovered_vertex and clicked_vertex:
 		draw_line(  hovered_vertex.rect_position+hovered_vertex.rect_size*0.5 , 
 					clicked_vertex.rect_position+clicked_vertex.rect_size*0.5 , 
 					Color(1,0,0,1) , 1 , true )
-	if info_panel.find_node("show_eccentricity").pressed:
+	
+	if tool_bar.find_node("show_eccentricity").pressed:
 		for vertex_name in edge_dict.keys():
 			var eccentricity = str(eccentricities[vertex_name])
 			var vertex = get_node(vertex_name)
 			draw_string( font , vertex.rect_position, eccentricity , Color(1,1,1,1)  )
+	elif tool_bar.find_node("show_centrality").pressed:
+		for vertex_name in edge_dict.keys():
+			var c = str( centrality[vertex_name]*100.0 ).substr(0,4) + '%'
+			var vertex = get_node(vertex_name)
+			draw_string( font , vertex.rect_position, c , Color(1,1,1,1)  )
 			
 
 
