@@ -14,5 +14,9 @@ func _ready():
 	
 	graph_node.connect("calculations_done",info_panel,"_on_Graph_calculations_done",[graph_node])
 	graph_node.connect("hovered_vertex_changed",info_panel,"_hovered_vertex_changed",[graph_node])
-	tool_bar.connect("redraw_graph",graph_node,"update")
+	
+	
+	tool_bar.find_node("show_eccentricity").connect( "pressed" , graph_node , "update" )
+	tool_bar.find_node("show_centrality").connect( "pressed" , graph_node , "update" )
+	tool_bar.find_node("clear").connect( "pressed" , graph_node , "clearGraph" )
 	

@@ -12,10 +12,14 @@ var available_component_names = []
 var next_vertex_index = 0
 var next_component_index = 0
 
-var edge_dict = {} # vertex -> vertex
+var using_sparse_algorithms = false
+var edge_as_springs = true
+var spring_length = 100
+var edge_dict = {} # vertex -> [ edge , edge ,  .... ]
+
+# calculated every "updateCalculations"
 var component_dict = {}  # vertex -> component
-var dijkstra_dict = {} # [vertex,vertex] -> distance 
-var sub_dijktras = {} # component -> dijkstra_dict
+var sub_asps = {} # component -> asp_dict(which is symmetrical [vertex][vertex]->distance)
 var eccentricities = {} # vertex -> eccentricity
 var component_size = {} # component -> size
 var radius = {} # component -> radius
@@ -34,13 +38,13 @@ func _init():
 	
 	available_vertex_names += ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
 	var alphabet_size = available_vertex_names.size()
-	for i in [1,2,3]:
+	for i in [1,2,3,4,5]:
 		for j in range(0,alphabet_size):
 			available_vertex_names.push_back( available_vertex_names[j]+str(i) )
 	available_component_names = available_vertex_names.duplicate()
 	for i in range(0,available_component_names.size()):
 		available_component_names[i] = "G" + available_component_names[i].to_lower()
-	for i in range(0,10):
+	for _i in range(0,10):
 		var random_color = Color(1,0,0)
 		random_color.h = rand_range(0,1)
 		available_component_colors.push_back( random_color )
@@ -54,6 +58,7 @@ func _gui_input(event):
 				self.clicked_vertex=null
 			updateCalculations()
 			accept_event()
+	
 	
 
 func setHoveredVertex(new_val):
@@ -144,7 +149,7 @@ func removeEdge( vertex1 , vertex2 ):
 	edge_dict[vertex2.name].erase(edge_inst)
 	edge_inst.queue_free()
 
-func getCloseVertex( vertex ) -> Array:
+func getCloseVertices( vertex ) -> Array:
 	var ret = []
 	if( vertex is String ): vertex = get_node(vertex)
 	for edge in edge_dict[vertex.name]:
@@ -154,9 +159,10 @@ func getCloseVertex( vertex ) -> Array:
 			ret.append(edge.vertex1)
 	return ret
 
+# Called every graph modification
 func updateCalculations() -> void:
-	updateDijkstraDict()
 	updateComponents()
+	updateAspDict()
 	updateEccentricities()
 	updateWienerIndex()
 	updateCentrality()
@@ -168,10 +174,10 @@ func updateEccentricities():
 	radius = {}
 	diameter = {}
 	for component_index in range( 0 , next_component_index ):
-		var sub_dijkstra = sub_dijktras[component_index]
+		var sub_asp = sub_asps[component_index]
 		var eccentricities_so_far = []
-		for v_name in sub_dijkstra.keys():
-			var eccentricity = sub_dijkstra[v_name].values().max()
+		for v_name in sub_asp.keys():
+			var eccentricity = sub_asp[v_name].values().max()
 			eccentricities[v_name] = eccentricity
 			eccentricities_so_far.push_back(eccentricity)
 		radius[component_index] = eccentricities_so_far.min()
@@ -181,51 +187,36 @@ func updateWienerIndex():
 	wiener_index = {}
 	for component_index in range( 0 , next_component_index ):
 		wiener_index[component_index] = 0
-		var sub_dijkstra = sub_dijktras[component_index]
-		var all_vertex_names = sub_dijkstra.keys()
+		var sub_asp = sub_asps[component_index]
+		var all_vertex_names = sub_asp.keys()
 		for v1 in all_vertex_names:
 			for v2 in all_vertex_names:
 				if(v1>=v2):continue
-				wiener_index[component_index] += sub_dijkstra[v1][v2]
+				wiener_index[component_index] += sub_asp[v1][v2]
 		wiener_index[component_index] *= 2.0
 
-func updateDijkstraDict() -> void :
-	var all_vertex_names = edge_dict.keys().duplicate()
-	dijkstra_dict = {}
-	for v1 in all_vertex_names:
-		dijkstra_dict[v1] = {}
-		for v2 in all_vertex_names:
-			dijkstra_dict[v1][v2] = null
-	for v1 in all_vertex_names:
-		for edge in edge_dict[v1]:
-			var v2 = edge.vertex1.name
-			if v2==v1: v2 = edge.vertex2.name
-			dijkstra_dict[v1][v2]=1
-			dijkstra_dict[v2][v1]=1
-		dijkstra_dict[v1][v1]=0
+func updateAspDict() -> void :
+	sub_asps = {}
 	
-	for _step in range(0,all_vertex_names.size()):
-		var got_updated = false
-		for v1 in all_vertex_names:
-			for v3 in all_vertex_names:
-				if( v1>=v3 ): continue # Don't calculate it twice for each pair
-				var current_min_dist = dijkstra_dict[v1][v3]
-				if current_min_dist==null or current_min_dist>2: # It can't be better than 2 now
-					for v2 in all_vertex_names:
-						var d1 = dijkstra_dict[v1][v2]
-						var d2 = dijkstra_dict[v2][v3]
-						if d1 != null and d2 != null:
-							if( current_min_dist==null or d1+d2<current_min_dist ):
-								dijkstra_dict[v1][v3] = d1+d2
-								dijkstra_dict[v3][v1] = dijkstra_dict[v1][v3]
-								got_updated = true
-								break
-		if(got_updated==false):
-			break
+	var vertex_names_by_component_index = {}
+	for v_name in component_dict.keys():
+		var component_index = component_dict[v_name]
+		if not vertex_names_by_component_index.has(component_index):
+			vertex_names_by_component_index[component_index]=[]
+		vertex_names_by_component_index[component_index].append(v_name)
+	
+	for component_index in component_size.keys():
+		if( using_sparse_algorithms ):
+			sub_asps[component_index] = calculateComponentAspSparse( vertex_names_by_component_index[component_index] )
+		else:
+			sub_asps[component_index] = calculateComponentAspFloydWarshall( vertex_names_by_component_index[component_index] )
+	
+	
+
 
 func updateComponents():
 	component_dict = {}
-	sub_dijktras = {}
+	sub_asps = {}
 	component_size = {}
 	next_component_index = 0
 	
@@ -236,52 +227,111 @@ func updateComponents():
 	for v_name in component_dict.keys():
 		if( component_dict[v_name]==null ):
 			var current_component_index = next_component_index
+			var current_component_size = 1
 			next_component_index += 1
 			component_dict[v_name] = current_component_index
 			discovered_queue.push_back(v_name)
 			while( discovered_queue.size() ):
 				var next_v_name = discovered_queue.pop_front()
-				for v2_obj in getCloseVertex(next_v_name):
+				for v2_obj in getCloseVertices(next_v_name):
 					var v2_name = v2_obj.name
 					if( component_dict[v2_name] == null ):
 						component_dict[v2_name] = current_component_index
 						discovered_queue.push_back(v2_name)
+						current_component_size += 1
+			component_size[current_component_index] = current_component_size
 	for v_name in edge_dict.keys():
 		var component_color = available_component_colors[ component_dict[v_name] % available_component_colors.size() ]
 		get_node(v_name).self_modulate = component_color
 		for edge in edge_dict[v_name]:
 			edge.self_modulate = lerp( Color.white , component_color , 0.4 )
 	
-	for i in range( 0 , next_component_index ):
-		sub_dijktras[i] = _generate_sub_dijkstra(i)
-		component_size[i] = sub_dijktras[i].size()
 
 func updateCentrality():
 	centrality = {}
 	for c in range(0,next_component_index):
-		for v_name in sub_dijktras[c].keys():
+		var asp_dict = sub_asps[c]
+		for v_name in asp_dict.keys():
 			var sum = 0.0
-			for d in sub_dijktras[c][v_name].values():
+			for d in asp_dict[v_name].values():
 				sum += d
 			if( sum == 0 ):
 				centrality[v_name] = 0
 			else:
-				centrality[v_name] = (sub_dijktras[c].size()-1) / sum
+				centrality[v_name] = (component_size[c]-1) / sum
 
-func _generate_sub_dijkstra( component_index ) -> Dictionary:
-	if( component_index==0 and next_component_index==1 ): return dijkstra_dict
-	var ret = {}
-	var component_vertex = []
-	for v_name in edge_dict.keys():
-		if component_dict[v_name]==component_index:
-			component_vertex.push_back(v_name)
-	for v_name in component_vertex:
-		ret[v_name] = {}
-	for v1 in component_vertex:
-		for v2 in component_vertex:
-			ret[v1][v2] = dijkstra_dict[v1][v2]
-			ret[v2][v1] = ret[v1][v2]
-	return ret
+func clearGraph():
+	for child in get_children():
+		child.queue_free()
+	edge_dict = {}
+	next_vertex_index = 0
+	updateCalculations()
+
+func calculateComponentAspFloydWarshall( component_vertices ):
+	var asp_dict = {}
+	for v1 in component_vertices:
+		asp_dict[v1] = {}
+		for v2 in component_vertices:
+			asp_dict[v1][v2] = null
+	for v1 in component_vertices:
+		for edge in edge_dict[v1]:
+			var v2 = edge.vertex1.name
+			if v2==v1: v2 = edge.vertex2.name
+			asp_dict[v1][v2]=1
+			asp_dict[v2][v1]=1
+		asp_dict[v1][v1]=0
+
+	for v2 in component_vertices:
+		for v1 in component_vertices:
+			for v3 in component_vertices:
+				if v1>=v3: continue
+				if( (asp_dict[v1][v2]==null) or (asp_dict[v2][v3]==null) ): continue
+				if( (asp_dict[v1][v3]==null) or (asp_dict[v1][v3] > asp_dict[v1][v2] + asp_dict[v2][v3]) ):
+					asp_dict[v1][v3] = asp_dict[v1][v2] + asp_dict[v2][v3]
+					asp_dict[v3][v1] = asp_dict[v1][v3]
+	return asp_dict
+
+func calculateComponentAspSparse( component_vertices ):
+	var asp_dict = {}
+	var aux_vertices = []
+	var bridges = []
+	var bridge_map = {}
+	
+	
+	for v in component_vertices:
+		if edge_dict[v].size() > 2:
+			aux_vertices.push_back(v)
+		else:
+			var new_bridge_index = bridges.size()
+			var new_bridge = {}
+			var to_explore = [v]
+			var exploreds = [v]
+			new_bridge["internal"] = []
+			new_bridge["length"] = 0
+			new_bridge["extrem0"] = null
+			new_bridge["extrem1"] = null
+			while to_explore.size()>0:
+				var current_exploring = to_explore.pop_back()
+				new_bridge["length"] += 1
+				new_bridge["internal"].push_back(current_exploring)
+				bridge_map[current_exploring] = new_bridge_index
+				for v2 in getCloseVertices(current_exploring):
+					v2 = v2.name
+					if edge_dict[v2].size() > 2 :
+						if( new_bridge["extrem0"] == null ):
+							new_bridge["extrem0"] = v2
+						elif new_bridge["extrem1"] != v2:
+							new_bridge["extrem1"] = v2
+					else:
+						if not (v2 in exploreds):
+							to_explore.push_back(v2)
+							exploreds.push_back(v2)
+			bridges.push_back(new_bridge)
+	
+	for bi in range(0,bridges.size()):
+		var bridge = bridges[bi]
+		pass
+	
 
 var available_component_colors = [Color.red,Color.blue,Color.green,Color.yellow,Color.blueviolet,Color.beige,Color.turquoise,Color.aqua,Color.blanchedalmond]
 func getComponentColor( component : int ):
@@ -299,14 +349,78 @@ func _draw():
 		for vertex_name in edge_dict.keys():
 			var eccentricity = str(eccentricities[vertex_name])
 			var vertex = get_node(vertex_name)
-			draw_string( font , vertex.rect_position, eccentricity , Color(1,1,1,1)  )
-	elif tool_bar.find_node("show_centrality").pressed:
+			draw_string( font , vertex.rect_position + Vector2(4,-2), eccentricity , Color(1,1,1,1)  )
+	if tool_bar.find_node("show_centrality").pressed:
 		for vertex_name in edge_dict.keys():
 			var c = str( centrality[vertex_name]*100.0 ).substr(0,4) + '%'
 			var vertex = get_node(vertex_name)
-			draw_string( font , vertex.rect_position, c , Color(1,1,1,1)  )
+			draw_string( font , vertex.rect_position + vertex.rect_size*Vector2(0,1) + Vector2(4,10), c , Color(1,1,1,1)  )
 			
 
+func _process(delta):
+	if(edge_as_springs):
+		updateSprings()
+		update()
 
+func updateSprings():
+	for v_name in edge_dict.keys():
+		var v = get_node(v_name)
+		v.speed = Vector2()
+	
+	for v_name in edge_dict.keys():
+		var v = get_node(v_name)
+		var degree = edge_dict[v_name].size()
+		var stable_angle = 0
+		if( degree > 1 ): stable_angle = 2*PI/degree
+		if v.dragging: continue
+		var close_vertices = getCloseVertices(v)
+		var angles_by_vertex = {}
+		var vertex_by_angle_sorted = []
+		for i in range(0,close_vertices.size()):
+			var v2 = close_vertices[i]
+			var delta_pos = (v2.rect_position - v.rect_position)
+			var angle = delta_pos.angle()
+			while(angle<0):angle+=2*PI
+			angles_by_vertex[v2.name] = angle
+			if( delta_pos.length() > spring_length ):
+				v.speed += delta_pos.normalized()*pow( delta_pos.length() - spring_length , 1.5 )*0.002
+			else:
+				v.speed += delta_pos.normalized()*(delta_pos.length() - spring_length)*0.01
+		
+		# ANGLE FIXING:
+		if degree>1:
+			var all_angles = angles_by_vertex.values()
+			all_angles.sort()
+			for a in all_angles:
+				for _v in angles_by_vertex.keys():
+					if angles_by_vertex[_v] == a and not (_v in vertex_by_angle_sorted) :
+						vertex_by_angle_sorted.push_back(_v)
+			for i_middle in range(0,degree):
+				var v2 = get_node(vertex_by_angle_sorted[i_middle])
+				var i_left = (i_middle-1)%degree
+				var i_right = (i_middle+1)%degree
+				if(i_left==-1):i_left+=degree
+				var left_angle = all_angles[i_left]
+				var mid_angle = all_angles[i_middle]
+				var right_angle = all_angles[i_right]
+				var left_delta = mid_angle - left_angle
+				var right_delta = right_angle - mid_angle
+				while(left_delta<0):left_delta+=2*PI
+				while(right_delta<0):right_delta+=2*PI
+				v2.speed += (v.rect_position - v2.rect_position).normalized().rotated(PI/2)*pow(stable_angle-right_delta,3)*0.1
+				v2.speed += (v.rect_position - v2.rect_position).normalized().rotated(PI/2)*pow(left_delta-stable_angle,3)*0.1
+				
+	
+	var mean_v = Vector2()
+	for v_name in edge_dict.keys():
+		var v = get_node(v_name)
+		mean_v += v.speed
+	mean_v /= edge_dict.size()
+	
+	for v_name in edge_dict.keys():
+		var v = get_node(v_name)
+		if v.dragging: continue
+		v.rect_position += v.speed - mean_v*int(not Input.is_mouse_button_pressed(BUTTON_LEFT))
+	
 
 

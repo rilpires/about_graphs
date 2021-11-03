@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=2]
+[gd_scene load_steps=15 format=2]
 
 [ext_resource path="res://Main.gd" type="Script" id=1]
 [ext_resource path="res://mouse_left.png" type="Texture" id=2]
@@ -6,9 +6,8 @@
 [ext_resource path="res://Graph.tscn" type="PackedScene" id=4]
 [ext_resource path="res://GraphInfoPanel.tscn" type="PackedScene" id=5]
 [ext_resource path="res://whitebox.png" type="Texture" id=6]
-[ext_resource path="res://ToolBar.gd" type="Script" id=7]
 
-[sub_resource type="GDScript" id=3]
+[sub_resource type="GDScript" id=1]
 script/source = "extends Control
 
 func _on_HelpTips_mouse_entered():
@@ -19,7 +18,7 @@ func _on_HelpTips_mouse_exited():
 	$AnimationPlayer.play(\"disappearing\")
 "
 
-[sub_resource type="Animation" id=4]
+[sub_resource type="Animation" id=2]
 resource_name = "appearing"
 tracks/0/type = "value"
 tracks/0/path = NodePath(".:modulate")
@@ -34,7 +33,7 @@ tracks/0/keys = {
 "values": [ Color( 1, 1, 1, 0 ), Color( 1, 1, 1, 1 ) ]
 }
 
-[sub_resource type="Animation" id=5]
+[sub_resource type="Animation" id=3]
 resource_name = "disappearing"
 length = 3.0
 tracks/0/type = "value"
@@ -50,19 +49,39 @@ tracks/0/keys = {
 "values": [ Color( 1, 1, 1, 1 ), Color( 1, 1, 1, 0.137255 ) ]
 }
 
-[sub_resource type="InputEventKey" id=6]
-scancode = 49
-
-[sub_resource type="ShortCut" id=2]
-shortcut = SubResource( 6 )
-
-[sub_resource type="ButtonGroup" id=9]
-
 [sub_resource type="InputEventKey" id=7]
 scancode = 50
 
 [sub_resource type="ShortCut" id=8]
 shortcut = SubResource( 7 )
+
+[sub_resource type="GDScript" id=9]
+script/source = "extends CheckButton
+
+
+
+func _on_use_sparse_pressed():
+	get_tree().root.find_node(\"Graph\",true,false).using_sparse_algorithms = pressed
+"
+
+[sub_resource type="GDScript" id=10]
+script/source = "extends CheckButton
+
+
+
+func _on_use_sparse_pressed():
+	get_tree().root.find_node(\"Graph\",true,false).edge_as_springs = pressed
+	get_parent().get_node(\"spring_length\").visible = pressed
+"
+
+[sub_resource type="GDScript" id=11]
+script/source = "extends HSlider
+
+
+
+func _on_spring_length_value_changed(value):
+	get_tree().root.find_node(\"Graph\",true,false).spring_length = value
+"
 
 [node name="TabContainer" type="TabContainer"]
 self_modulate = Color( 1, 1, 1, 0 )
@@ -83,16 +102,20 @@ margin_right = -4.0
 margin_bottom = -4.0
 mouse_filter = 2
 
+[node name="Graph" parent="Simple graph" instance=ExtResource( 4 )]
+mouse_filter = 1
+
 [node name="HelpTips" type="Control" parent="Simple graph"]
-editor/display_folded = true
-modulate = Color( 1, 1, 1, 0.137255 )
 anchor_left = 1.0
 anchor_right = 1.0
 margin_left = -190.0
 margin_top = -14.0
 margin_bottom = 185.0
-mouse_filter = 1
-script = SubResource( 3 )
+mouse_filter = 2
+script = SubResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
 
 [node name="left_click" type="TextureRect" parent="Simple graph/HelpTips"]
 margin_right = 48.0
@@ -127,11 +150,8 @@ Delete edge"
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Simple graph/HelpTips"]
 autoplay = "disappearing"
-anims/appearing = SubResource( 4 )
-anims/disappearing = SubResource( 5 )
-
-[node name="Graph" parent="Simple graph" instance=ExtResource( 4 )]
-mouse_filter = 1
+anims/appearing = SubResource( 2 )
+anims/disappearing = SubResource( 3 )
 
 [node name="InfoPanel" parent="Simple graph" instance=ExtResource( 5 )]
 anchor_bottom = 1.0
@@ -156,28 +176,101 @@ patch_margin_left = 2
 patch_margin_top = 2
 patch_margin_right = 2
 patch_margin_bottom = 2
-script = ExtResource( 7 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
 
 [node name="HBox" type="HBoxContainer" parent="Simple graph/ToolBar"]
 self_modulate = Color( 0.376471, 0.376471, 0.376471, 1 )
 anchor_right = 1.0
 anchor_bottom = 1.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="VSeparator" type="VSeparator" parent="Simple graph/ToolBar/HBox"]
+margin_right = 4.0
+margin_bottom = 52.0
+
+[node name="clear" type="Button" parent="Simple graph/ToolBar/HBox"]
+margin_left = 8.0
+margin_top = 8.0
+margin_right = 52.0
+margin_bottom = 44.0
+rect_min_size = Vector2( 0, 36 )
+size_flags_vertical = 4
+text = "Clear"
+
+[node name="VSeparator2" type="VSeparator" parent="Simple graph/ToolBar/HBox"]
+margin_left = 56.0
+margin_right = 60.0
+margin_bottom = 52.0
 
 [node name="show_eccentricity" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
-margin_right = 192.0
+margin_left = 64.0
+margin_right = 256.0
 margin_bottom = 52.0
 action_mode = 0
-shortcut = SubResource( 2 )
-group = SubResource( 9 )
 text = "Show eccentricity"
 
 [node name="show_centrality" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
-margin_left = 196.0
-margin_right = 373.0
+margin_left = 260.0
+margin_right = 437.0
 margin_bottom = 52.0
 action_mode = 0
 shortcut = SubResource( 8 )
-group = SubResource( 9 )
 text = "Show centrality"
+
+[node name="VSeparator3" type="VSeparator" parent="Simple graph/ToolBar/HBox"]
+margin_left = 441.0
+margin_right = 445.0
+margin_bottom = 52.0
+
+[node name="use_sparse" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
+visible = false
+margin_left = 449.0
+margin_right = 672.0
+margin_bottom = 52.0
+pressed = true
+action_mode = 0
+text = "Use sparse algorithms"
+script = SubResource( 9 )
+
+[node name="edge_as_springs" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
+margin_left = 449.0
+margin_right = 627.0
+margin_bottom = 52.0
+pressed = true
+action_mode = 0
+text = "Edge as springs"
+script = SubResource( 10 )
+
+[node name="spring_length" type="HSlider" parent="Simple graph/ToolBar/HBox"]
+margin_left = 631.0
+margin_top = 18.0
+margin_right = 771.0
+margin_bottom = 34.0
+rect_min_size = Vector2( 140, 0 )
+size_flags_vertical = 6
+min_value = 15.0
+max_value = 250.0
+value = 100.0
+script = SubResource( 11 )
+
+[node name="Label" type="Label" parent="Simple graph/ToolBar/HBox/spring_length"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -41.5
+margin_top = -11.3265
+margin_right = 41.5
+margin_bottom = 2.67352
+text = "Spring length"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
 [connection signal="mouse_entered" from="Simple graph/HelpTips" to="Simple graph/HelpTips" method="_on_HelpTips_mouse_entered"]
 [connection signal="mouse_exited" from="Simple graph/HelpTips" to="Simple graph/HelpTips" method="_on_HelpTips_mouse_exited"]
+[connection signal="pressed" from="Simple graph/ToolBar/HBox/use_sparse" to="Simple graph/ToolBar/HBox/use_sparse" method="_on_use_sparse_pressed"]
+[connection signal="pressed" from="Simple graph/ToolBar/HBox/edge_as_springs" to="Simple graph/ToolBar/HBox/edge_as_springs" method="_on_use_sparse_pressed"]
+[connection signal="value_changed" from="Simple graph/ToolBar/HBox/spring_length" to="Simple graph/ToolBar/HBox/spring_length" method="_on_spring_length_value_changed"]

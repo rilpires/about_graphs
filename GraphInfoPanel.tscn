@@ -9,6 +9,7 @@ margin_left = 17.0
 margin_top = 17.0
 margin_right = 215.0
 margin_bottom = 545.0
+mouse_filter = 2
 script = ExtResource( 1 )
 __meta__ = {
 "_edit_use_anchors_": false
@@ -21,6 +22,10 @@ margin_left = 5.0
 margin_top = 5.0
 margin_right = -5.0
 margin_bottom = -5.0
+mouse_filter = 2
+__meta__ = {
+"_edit_use_anchors_": false
+}
 
 [node name="0" type="NinePatchRect" parent="Components"]
 modulate = Color( 1, 0.298039, 0.298039, 1 )
@@ -41,11 +46,15 @@ margin_left = 5.0
 margin_top = 5.0
 margin_right = -5.0
 margin_bottom = -5.0
+mouse_filter = 2
+__meta__ = {
+"_edit_use_anchors_": false
+}
 
 [node name="wiener_index" type="Label" parent="Components/0/labels"]
 margin_right = 178.0
 margin_bottom = 14.0
-text = "aaaaaaa ae porra"
+text = "ttttt: 000000"
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -54,7 +63,7 @@ __meta__ = {
 margin_top = 18.0
 margin_right = 178.0
 margin_bottom = 32.0
-text = "aaaaaaa ae porra"
+text = "ttttt: 000000"
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -63,7 +72,7 @@ __meta__ = {
 margin_top = 36.0
 margin_right = 178.0
 margin_bottom = 50.0
-text = "aaaaaaa ae porra"
+text = "ttttt: 000000"
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -72,7 +81,7 @@ __meta__ = {
 margin_top = 54.0
 margin_right = 178.0
 margin_bottom = 68.0
-text = "aaaaaaa ae porra"
+text = "ttttt: 000000"
 __meta__ = {
 "_edit_use_anchors_": false
 }
