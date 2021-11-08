@@ -49,13 +49,13 @@ tracks/0/keys = {
 "values": [ Color( 1, 1, 1, 1 ), Color( 1, 1, 1, 0.137255 ) ]
 }
 
-[sub_resource type="InputEventKey" id=7]
+[sub_resource type="InputEventKey" id=4]
 scancode = 50
 
-[sub_resource type="ShortCut" id=8]
-shortcut = SubResource( 7 )
+[sub_resource type="ShortCut" id=5]
+shortcut = SubResource( 4 )
 
-[sub_resource type="GDScript" id=9]
+[sub_resource type="GDScript" id=6]
 script/source = "extends CheckButton
 
 
@@ -64,7 +64,7 @@ func _on_use_sparse_pressed():
 	get_tree().root.find_node(\"Graph\",true,false).using_sparse_algorithms = pressed
 "
 
-[sub_resource type="GDScript" id=10]
+[sub_resource type="GDScript" id=7]
 script/source = "extends CheckButton
 
 
@@ -74,7 +74,7 @@ func _on_use_sparse_pressed():
 	get_parent().get_node(\"spring_length\").visible = pressed
 "
 
-[sub_resource type="GDScript" id=11]
+[sub_resource type="GDScript" id=8]
 script/source = "extends HSlider
 
 
@@ -218,7 +218,7 @@ margin_left = 260.0
 margin_right = 437.0
 margin_bottom = 52.0
 action_mode = 0
-shortcut = SubResource( 8 )
+shortcut = SubResource( 5 )
 text = "Show centrality"
 
 [node name="VSeparator3" type="VSeparator" parent="Simple graph/ToolBar/HBox"]
@@ -234,7 +234,7 @@ margin_bottom = 52.0
 pressed = true
 action_mode = 0
 text = "Use sparse algorithms"
-script = SubResource( 9 )
+script = SubResource( 6 )
 
 [node name="edge_as_springs" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
 margin_left = 449.0
@@ -243,7 +243,7 @@ margin_bottom = 52.0
 pressed = true
 action_mode = 0
 text = "Edge as springs"
-script = SubResource( 10 )
+script = SubResource( 7 )
 
 [node name="spring_length" type="HSlider" parent="Simple graph/ToolBar/HBox"]
 margin_left = 631.0
@@ -255,7 +255,7 @@ size_flags_vertical = 6
 min_value = 15.0
 max_value = 250.0
 value = 100.0
-script = SubResource( 11 )
+script = SubResource( 8 )
 
 [node name="Label" type="Label" parent="Simple graph/ToolBar/HBox/spring_length"]
 anchor_left = 0.5

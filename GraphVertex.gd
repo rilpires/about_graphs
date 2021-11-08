@@ -5,8 +5,9 @@ var click_toggling = false
 var dragging = false
 var original_pos = Vector2(0,0)
 var original_mouse_pos = Vector2()
-var speed = Vector2()
 var adjs_delta_angle = []
+var speed = Vector2()
+var accel = Vector2()
 
 func _ready():
 	_on_GraphVertex_mouse_entered()

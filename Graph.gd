@@ -261,6 +261,8 @@ func updateCentrality():
 				centrality[v_name] = (component_size[c]-1) / sum
 
 func clearGraph():
+	clicked_vertex = null
+	hovered_vertex = null
 	for child in get_children():
 		child.queue_free()
 	edge_dict = {}
@@ -363,16 +365,18 @@ func _process(delta):
 		update()
 
 func updateSprings():
+	var angle_fixing_factor = 5 # greater: fast fixing
+	
 	for v_name in edge_dict.keys():
 		var v = get_node(v_name)
-		v.speed = Vector2()
+		v.speed *= 0.83 # 1 -> ideal springs, never stops oscilating;
+		v.accel = Vector2()
 	
 	for v_name in edge_dict.keys():
 		var v = get_node(v_name)
 		var degree = edge_dict[v_name].size()
 		var stable_angle = 0
 		if( degree > 1 ): stable_angle = 2*PI/degree
-		if v.dragging: continue
 		var close_vertices = getCloseVertices(v)
 		var angles_by_vertex = {}
 		var vertex_by_angle_sorted = []
@@ -382,10 +386,7 @@ func updateSprings():
 			var angle = delta_pos.angle()
 			while(angle<0):angle+=2*PI
 			angles_by_vertex[v2.name] = angle
-			if( delta_pos.length() > spring_length ):
-				v.speed += delta_pos.normalized()*pow( delta_pos.length() - spring_length , 1.5 )*0.002
-			else:
-				v.speed += delta_pos.normalized()*(delta_pos.length() - spring_length)*0.01
+			v.accel += delta_pos.normalized()*( delta_pos.length() - spring_length )
 		
 		# ANGLE FIXING:
 		if degree>1:
@@ -407,19 +408,26 @@ func updateSprings():
 				var right_delta = right_angle - mid_angle
 				while(left_delta<0):left_delta+=2*PI
 				while(right_delta<0):right_delta+=2*PI
-				v2.speed += (v.rect_position - v2.rect_position).normalized().rotated(PI/2)*pow(stable_angle-right_delta,3)*0.1
-				v2.speed += (v.rect_position - v2.rect_position).normalized().rotated(PI/2)*pow(left_delta-stable_angle,3)*0.1
-				
+				v2.accel += angle_fixing_factor*(v.rect_position - v2.rect_position).normalized().rotated(PI/2)*(left_delta-right_delta)
 	
-	var mean_v = Vector2()
+	
+	
+	var mean_v_by_component = {}
 	for v_name in edge_dict.keys():
 		var v = get_node(v_name)
-		mean_v += v.speed
-	mean_v /= edge_dict.size()
+		var c = component_dict[v_name]
+		v.speed += v.accel*0.01
+		if( not mean_v_by_component.has(c) ):
+			mean_v_by_component[c] = Vector2()
+		mean_v_by_component[c] += v.speed
+	for c in mean_v_by_component.keys():
+		mean_v_by_component[c] /= component_size[c]
 	
 	for v_name in edge_dict.keys():
 		var v = get_node(v_name)
 		if v.dragging: continue
+		var c = component_dict[v_name]
+		var mean_v = mean_v_by_component[c]
 		v.rect_position += v.speed - mean_v*int(not Input.is_mouse_button_pressed(BUTTON_LEFT))
 	
 
