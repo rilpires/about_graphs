@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=2]
+[gd_scene load_steps=22 format=2]
 
 [ext_resource path="res://Main.gd" type="Script" id=1]
 [ext_resource path="res://mouse_left.png" type="Texture" id=2]
@@ -6,6 +6,7 @@
 [ext_resource path="res://Graph.tscn" type="PackedScene" id=4]
 [ext_resource path="res://GraphInfoPanel.tscn" type="PackedScene" id=5]
 [ext_resource path="res://whitebox.png" type="Texture" id=6]
+[ext_resource path="res://ChallengerSelector.gd" type="Script" id=7]
 
 [sub_resource type="GDScript" id=1]
 script/source = "extends Control
@@ -83,8 +84,129 @@ func _on_spring_length_value_changed(value):
 	get_tree().root.find_node(\"Graph\",true,false).spring_length = value
 "
 
-[node name="TabContainer" type="TabContainer"]
-self_modulate = Color( 1, 1, 1, 0 )
+[sub_resource type="GDScript" id=13]
+script/source = "extends Button
+
+var graph_node = null
+
+func _on_Copy_pressed():
+	if not graph_node:
+		graph_node = get_tree().current_scene.find_node(\"Graph\",true,false)
+	find_node(\"AnimationPlayer\",true,false).play(\"a\")
+	OS.clipboard = graph_node.toString()
+"
+
+[sub_resource type="Animation" id=9]
+resource_name = "a"
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.5, 1 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 1, 1, 1, 1 ), Color( 1, 1, 1, 0 ) ]
+}
+
+[sub_resource type="Animation" id=10]
+resource_name = "default"
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 0 ) ]
+}
+
+[sub_resource type="GDScript" id=12]
+script/source = "extends Button
+
+var graph_node = null
+
+
+func _on_Paste_pressed():
+	if not graph_node: graph_node = get_tree().current_scene.find_node(\"Graph\",true,false)
+	
+	if \"[about_graphs]\" == OS.clipboard.substr(0,14):
+		graph_node.fromString(OS.clipboard)
+	else:
+		var r = Rect2( rect_global_position , get_node(\"Popup\").rect_size )
+		get_node(\"Popup\").popup( r )
+
+
+func _on_LineEdit_text_changed(new_text):
+	
+	if \"[about_graphs]\" == new_text.substr(0,14):
+		graph_node.fromString(new_text)
+		get_node(\"Popup\").hide()
+		return true
+	
+	return false
+	
+
+func _on_LineEdit_text_entered(new_text):
+	if( false == _on_LineEdit_text_changed(new_text) ):
+		graph_node.fromString(new_text)
+	get_node(\"Popup\").hide()
+
+
+
+func _on_Popup_about_to_show():
+	get_node(\"Popup/LineEdit\").text = \"\"
+"
+
+[sub_resource type="Animation" id=14]
+resource_name = "a"
+length = 5.0
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ true ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath(".:modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 2.5, 5 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 1, 1, 1, 1 ), Color( 1, 1, 1, 0 ) ]
+}
+
+[sub_resource type="Animation" id=15]
+resource_name = "default"
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ false ]
+}
+
+[node name="Main" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
@@ -93,38 +215,28 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="Simple graph" type="Control" parent="."]
-anchor_right = 1.0
-anchor_bottom = 1.0
-margin_left = 4.0
-margin_top = 32.0
-margin_right = -4.0
-margin_bottom = -4.0
-mouse_filter = 2
-
-[node name="Graph" parent="Simple graph" instance=ExtResource( 4 )]
+[node name="Graph" parent="." instance=ExtResource( 4 )]
 mouse_filter = 1
 
-[node name="HelpTips" type="Control" parent="Simple graph"]
+[node name="HelpTips" type="Control" parent="."]
 anchor_left = 1.0
 anchor_right = 1.0
 margin_left = -190.0
-margin_top = -14.0
-margin_bottom = 185.0
+margin_bottom = 199.0
 mouse_filter = 2
 script = SubResource( 1 )
 __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="left_click" type="TextureRect" parent="Simple graph/HelpTips"]
+[node name="left_click" type="TextureRect" parent="HelpTips"]
 margin_right = 48.0
 margin_bottom = 48.0
 mouse_filter = 2
 texture = ExtResource( 2 )
 expand = true
 
-[node name="Label" type="Label" parent="Simple graph/HelpTips/left_click"]
+[node name="Label" type="Label" parent="HelpTips/left_click"]
 margin_left = 0.663391
 margin_top = 50.821
 margin_right = 175.663
@@ -132,7 +244,7 @@ margin_bottom = 98.821
 text = "[Create|Drag|Select] vertex
 Create edge"
 
-[node name="right_click" type="TextureRect" parent="Simple graph/HelpTips"]
+[node name="right_click" type="TextureRect" parent="HelpTips"]
 margin_top = 106.993
 margin_right = 48.0
 margin_bottom = 154.993
@@ -140,7 +252,7 @@ mouse_filter = 2
 texture = ExtResource( 3 )
 expand = true
 
-[node name="Label" type="Label" parent="Simple graph/HelpTips/right_click"]
+[node name="Label" type="Label" parent="HelpTips/right_click"]
 margin_left = 0.663391
 margin_top = 50.821
 margin_right = 87.6634
@@ -148,20 +260,20 @@ margin_bottom = 98.821
 text = "Delete vertex
 Delete edge"
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Simple graph/HelpTips"]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="HelpTips"]
 autoplay = "disappearing"
 anims/appearing = SubResource( 2 )
 anims/disappearing = SubResource( 3 )
 
-[node name="InfoPanel" parent="Simple graph" instance=ExtResource( 5 )]
+[node name="InfoPanel" parent="." instance=ExtResource( 5 )]
 anchor_bottom = 1.0
 margin_left = 0.0
 margin_top = 0.0
-margin_right = 0.0
-margin_bottom = 0.0
+margin_right = 200.0
+margin_bottom = -66.0
 rect_min_size = Vector2( 200, 0 )
 
-[node name="ToolBar" type="NinePatchRect" parent="Simple graph"]
+[node name="ToolBar" type="NinePatchRect" parent="."]
 self_modulate = Color( 0.490196, 0.490196, 0.490196, 1 )
 anchor_top = 1.0
 anchor_right = 1.0
@@ -180,7 +292,7 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="HBox" type="HBoxContainer" parent="Simple graph/ToolBar"]
+[node name="HBox" type="HBoxContainer" parent="ToolBar"]
 self_modulate = Color( 0.376471, 0.376471, 0.376471, 1 )
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -188,45 +300,45 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="VSeparator" type="VSeparator" parent="Simple graph/ToolBar/HBox"]
+[node name="VSeparator" type="VSeparator" parent="ToolBar/HBox"]
 margin_right = 4.0
 margin_bottom = 52.0
 
-[node name="clear" type="Button" parent="Simple graph/ToolBar/HBox"]
+[node name="clear" type="Button" parent="ToolBar/HBox"]
 margin_left = 8.0
 margin_top = 8.0
-margin_right = 52.0
+margin_right = 56.0
 margin_bottom = 44.0
 rect_min_size = Vector2( 0, 36 )
 size_flags_vertical = 4
-text = "Clear"
+text = "Reset"
 
-[node name="VSeparator2" type="VSeparator" parent="Simple graph/ToolBar/HBox"]
-margin_left = 56.0
-margin_right = 60.0
+[node name="VSeparator2" type="VSeparator" parent="ToolBar/HBox"]
+margin_left = 60.0
+margin_right = 64.0
 margin_bottom = 52.0
 
-[node name="show_eccentricity" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
-margin_left = 64.0
-margin_right = 256.0
+[node name="show_eccentricity" type="CheckButton" parent="ToolBar/HBox"]
+margin_left = 68.0
+margin_right = 222.0
 margin_bottom = 52.0
 action_mode = 0
-text = "Show eccentricity"
+text = "Eccentricity"
 
-[node name="show_centrality" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
-margin_left = 260.0
-margin_right = 437.0
+[node name="show_centrality" type="CheckButton" parent="ToolBar/HBox"]
+margin_left = 226.0
+margin_right = 367.0
 margin_bottom = 52.0
 action_mode = 0
 shortcut = SubResource( 5 )
-text = "Show centrality"
+text = "Centrality"
 
-[node name="VSeparator3" type="VSeparator" parent="Simple graph/ToolBar/HBox"]
-margin_left = 441.0
-margin_right = 445.0
+[node name="VSeparator3" type="VSeparator" parent="ToolBar/HBox"]
+margin_left = 371.0
+margin_right = 375.0
 margin_bottom = 52.0
 
-[node name="use_sparse" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
+[node name="use_sparse" type="CheckButton" parent="ToolBar/HBox"]
 visible = false
 margin_left = 449.0
 margin_right = 672.0
@@ -236,28 +348,28 @@ action_mode = 0
 text = "Use sparse algorithms"
 script = SubResource( 6 )
 
-[node name="edge_as_springs" type="CheckButton" parent="Simple graph/ToolBar/HBox"]
-margin_left = 449.0
-margin_right = 627.0
+[node name="edge_as_springs" type="CheckButton" parent="ToolBar/HBox"]
+margin_left = 379.0
+margin_right = 557.0
 margin_bottom = 52.0
 pressed = true
 action_mode = 0
 text = "Edge as springs"
 script = SubResource( 7 )
 
-[node name="spring_length" type="HSlider" parent="Simple graph/ToolBar/HBox"]
-margin_left = 631.0
+[node name="spring_length" type="HSlider" parent="ToolBar/HBox"]
+margin_left = 561.0
 margin_top = 18.0
-margin_right = 771.0
+margin_right = 701.0
 margin_bottom = 34.0
 rect_min_size = Vector2( 140, 0 )
 size_flags_vertical = 6
 min_value = 15.0
-max_value = 250.0
+max_value = 200.0
 value = 100.0
 script = SubResource( 8 )
 
-[node name="Label" type="Label" parent="Simple graph/ToolBar/HBox/spring_length"]
+[node name="Label" type="Label" parent="ToolBar/HBox/spring_length"]
 anchor_left = 0.5
 anchor_right = 0.5
 margin_left = -41.5
@@ -269,8 +381,130 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[connection signal="mouse_entered" from="Simple graph/HelpTips" to="Simple graph/HelpTips" method="_on_HelpTips_mouse_entered"]
-[connection signal="mouse_exited" from="Simple graph/HelpTips" to="Simple graph/HelpTips" method="_on_HelpTips_mouse_exited"]
-[connection signal="pressed" from="Simple graph/ToolBar/HBox/use_sparse" to="Simple graph/ToolBar/HBox/use_sparse" method="_on_use_sparse_pressed"]
-[connection signal="pressed" from="Simple graph/ToolBar/HBox/edge_as_springs" to="Simple graph/ToolBar/HBox/edge_as_springs" method="_on_use_sparse_pressed"]
-[connection signal="value_changed" from="Simple graph/ToolBar/HBox/spring_length" to="Simple graph/ToolBar/HBox/spring_length" method="_on_spring_length_value_changed"]
+[node name="VSeparator4" type="VSeparator" parent="ToolBar/HBox"]
+margin_left = 705.0
+margin_right = 709.0
+margin_bottom = 52.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ToolBar/HBox"]
+margin_left = 713.0
+margin_right = 791.0
+margin_bottom = 52.0
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="Copy" type="Button" parent="ToolBar/HBox/VBoxContainer"]
+margin_top = 4.0
+margin_right = 78.0
+margin_bottom = 24.0
+text = "Copy"
+script = SubResource( 13 )
+
+[node name="Label" type="Label" parent="ToolBar/HBox/VBoxContainer/Copy"]
+modulate = Color( 1, 1, 1, 0.8 )
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -144.0
+margin_top = -31.0
+margin_right = 5.0
+margin_bottom = -17.0
+text = "Copied to the clipboard"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ToolBar/HBox/VBoxContainer/Copy/Label"]
+autoplay = "default"
+playback_speed = 0.5
+anims/a = SubResource( 9 )
+anims/default = SubResource( 10 )
+
+[node name="Paste" type="Button" parent="ToolBar/HBox/VBoxContainer"]
+margin_top = 28.0
+margin_right = 78.0
+margin_bottom = 48.0
+text = "Paste"
+script = SubResource( 12 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Popup" type="Popup" parent="ToolBar/HBox/VBoxContainer/Paste"]
+visible = true
+margin_left = -314.0
+margin_top = -60.0
+margin_right = 86.0
+margin_bottom = -32.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="LineEdit" type="LineEdit" parent="ToolBar/HBox/VBoxContainer/Paste/Popup"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+placeholder_text = "Paste your copied string here"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="VSeparator5" type="VSeparator" parent="ToolBar/HBox"]
+margin_left = 795.0
+margin_right = 799.0
+margin_bottom = 52.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ChallengeSelector" type="OptionButton" parent="."]
+anchor_top = 1.0
+anchor_bottom = 1.0
+margin_left = 4.0
+margin_top = -63.0
+margin_right = 199.0
+margin_bottom = -11.0
+script = ExtResource( 7 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ChallengeDescription" type="Label" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -239.0
+margin_top = -236.0
+margin_right = 46.0
+margin_bottom = -48.0
+rect_scale = Vector2( 2, 2 )
+custom_colors/font_outline_modulate = Color( 0, 0, 0, 1 )
+custom_colors/font_color_shadow = Color( 0, 0, 0, 1 )
+custom_constants/shadow_as_outline = 3
+text = "Can you blablablabla bla blablablabla ????"
+align = 1
+autowrap = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ChallengeDescription"]
+autoplay = "default"
+playback_speed = 0.7
+anims/a = SubResource( 14 )
+anims/default = SubResource( 15 )
+
+[node name="HTTPRequest" type="HTTPRequest" parent="."]
+timeout = 3
+
+[connection signal="mouse_entered" from="HelpTips" to="HelpTips" method="_on_HelpTips_mouse_entered"]
+[connection signal="mouse_exited" from="HelpTips" to="HelpTips" method="_on_HelpTips_mouse_exited"]
+[connection signal="pressed" from="ToolBar/HBox/use_sparse" to="ToolBar/HBox/use_sparse" method="_on_use_sparse_pressed"]
+[connection signal="pressed" from="ToolBar/HBox/edge_as_springs" to="ToolBar/HBox/edge_as_springs" method="_on_use_sparse_pressed"]
+[connection signal="value_changed" from="ToolBar/HBox/spring_length" to="ToolBar/HBox/spring_length" method="_on_spring_length_value_changed"]
+[connection signal="pressed" from="ToolBar/HBox/VBoxContainer/Copy" to="ToolBar/HBox/VBoxContainer/Copy" method="_on_Copy_pressed"]
+[connection signal="pressed" from="ToolBar/HBox/VBoxContainer/Paste" to="ToolBar/HBox/VBoxContainer/Paste" method="_on_Paste_pressed"]
+[connection signal="about_to_show" from="ToolBar/HBox/VBoxContainer/Paste/Popup" to="ToolBar/HBox/VBoxContainer/Paste" method="_on_Popup_about_to_show"]
+[connection signal="text_changed" from="ToolBar/HBox/VBoxContainer/Paste/Popup/LineEdit" to="ToolBar/HBox/VBoxContainer/Paste" method="_on_LineEdit_text_changed"]
+[connection signal="text_entered" from="ToolBar/HBox/VBoxContainer/Paste/Popup/LineEdit" to="ToolBar/HBox/VBoxContainer/Paste" method="_on_LineEdit_text_entered"]
+[connection signal="item_selected" from="ChallengeSelector" to="ChallengeSelector" method="_on_ChallengeSelector_item_selected"]
+[connection signal="request_completed" from="HTTPRequest" to="." method="_on_HTTPRequest_request_completed"]

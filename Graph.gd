@@ -21,6 +21,7 @@ var edge_dict = {} # vertex -> [ edge , edge ,  .... ]
 var component_dict = {}  # vertex -> component
 var sub_asps = {} # component -> asp_dict(which is symmetrical [vertex][vertex]->distance)
 var eccentricities = {} # vertex -> eccentricity
+var edge_count = {} # component -> int(edge count)
 var component_size = {} # component -> size
 var radius = {} # component -> radius
 var diameter = {} # component -> diameter
@@ -83,15 +84,20 @@ func setClickedVertex(new_val):
 	update()
 
 func getNextVertexName() -> String:
-	next_vertex_index += 1
-	return available_vertex_names[ next_vertex_index-1 ]
-func getNextComponentName() -> String:
-	next_vertex_index += 1
-	return available_vertex_names[ next_vertex_index-1 ]
+	while( available_vertex_names[ next_vertex_index ] in edge_dict.keys() ):
+		next_vertex_index += 1
+		if( next_vertex_index >= available_vertex_names.size() ):
+			return String(randi()%100000)
+	
+	return available_vertex_names[ next_vertex_index ]
 
-func addVertex( global_pos : Vector2 ) -> GraphVertex:
+func addVertex( global_pos : Vector2 , optional_name = null ) -> GraphVertex:
 	var new_inst = vertex_res.instance()
-	var new_vertex_name = getNextVertexName()
+	var new_vertex_name
+	if optional_name:
+		new_vertex_name = optional_name
+	else:
+		new_vertex_name = getNextVertexName()
 	new_inst.name = new_vertex_name
 	add_child( new_inst )
 	new_inst.rect_global_position = global_pos - new_inst.rect_size*0.5
@@ -166,6 +172,7 @@ func updateCalculations() -> void:
 	updateEccentricities()
 	updateWienerIndex()
 	updateCentrality()
+	updateEdgeCount()
 	emit_signal("calculations_done")
 
 # Also updates radius & diameter
@@ -260,14 +267,82 @@ func updateCentrality():
 			else:
 				centrality[v_name] = (component_size[c]-1) / sum
 
+
+func updateEdgeCount():
+	for c in component_size.keys():
+		edge_count[c] = 0
+	for v1_name in edge_dict.keys():
+		var c = component_dict[v1_name]
+		var v1 = get_node(v1_name)
+		for v2 in getCloseVertices(v1):
+			if( v1.name < v2.name ):
+				edge_count[c] += 1
+
+
 func clearGraph():
 	clicked_vertex = null
 	hovered_vertex = null
 	for child in get_children():
+		child.name = "$$$" + child.name
 		child.queue_free()
 	edge_dict = {}
 	next_vertex_index = 0
 	updateCalculations()
+
+func fromString( g:String ):
+	clearGraph()
+	var g_splitted = g.split(";")
+	if( g_splitted[0] == "[about_graphs]" ):
+		g_splitted.remove(0)
+	var edges_string
+	var positions_string = null
+	edges_string = g_splitted[0]
+	if g_splitted.size() > 1 :
+		positions_string = g_splitted[1]
+	
+	# Creating the vertices & edges
+	var edges_string_splitted = edges_string.split(" ",false)
+	for i1 in range(0,edges_string_splitted.size(),2):
+		var i2 = i1+1
+		var v1_name = edges_string_splitted[i1]
+		var v2_name = edges_string_splitted[i2]
+		if not ( v1_name in edge_dict.keys() ):
+			addVertex( get_viewport_rect().size*0.5 + Vector2(100,0).rotated(rand_range(0,2*PI)) , v1_name )
+		if not ( v2_name in edge_dict.keys() ):
+			addVertex( get_viewport_rect().size*0.5 + Vector2(100,0).rotated(rand_range(0,2*PI)) , v2_name )
+		var v1 = get_node(v1_name)
+		var v2 = get_node(v2_name)
+		if not edgeExists(v1,v2):
+			addEdge( v1 , v2 )
+	
+	# Setting the positions, if available
+	if positions_string != null:
+		var positions_string_splitted = positions_string.split(" ",false)
+		for i in range(0,positions_string_splitted.size(),3):
+			var v_name = positions_string_splitted[i]
+			var x = float(positions_string_splitted[i+1])
+			var y = float(positions_string_splitted[i+2])
+			get_node(v_name).rect_position = Vector2( x,y )
+		
+	updateCalculations()
+
+func toString() -> String :
+	var ret = "[about_graphs];"
+	var edges_string = ""
+	var position_string = ""
+	
+	for v1_name in edge_dict.keys():
+		for v2 in getCloseVertices(v1_name):
+			var v2_name = v2.name
+			if v2_name>v1_name:
+				edges_string += " " + v1_name + " " + v2_name
+	
+	for v_name in edge_dict.keys():
+		var v = get_node(v_name)
+		position_string += " " + v_name + " " + String(int(v.rect_position.x)) + " " + String(int(v.rect_position.y))
+	
+	return "[about_graphs]; " + edges_string + ";" + position_string;
+
 
 func calculateComponentAspFloydWarshall( component_vertices ):
 	var asp_dict = {}
@@ -365,7 +440,7 @@ func _process(delta):
 		update()
 
 func updateSprings():
-	var angle_fixing_factor = 5 # greater: fast fixing
+	var angle_fixing_factor = 2 # greater: fast fixing
 	
 	for v_name in edge_dict.keys():
 		var v = get_node(v_name)
@@ -375,8 +450,6 @@ func updateSprings():
 	for v_name in edge_dict.keys():
 		var v = get_node(v_name)
 		var degree = edge_dict[v_name].size()
-		var stable_angle = 0
-		if( degree > 1 ): stable_angle = 2*PI/degree
 		var close_vertices = getCloseVertices(v)
 		var angles_by_vertex = {}
 		var vertex_by_angle_sorted = []
