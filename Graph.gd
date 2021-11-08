@@ -323,6 +323,7 @@ func fromString( g:String ):
 			var x = float(positions_string_splitted[i+1])
 			var y = float(positions_string_splitted[i+2])
 			get_node(v_name).rect_position = Vector2( x,y )
+			get_node(v_name).emit_signal("item_rect_changed")
 		
 	updateCalculations()
 
@@ -414,26 +415,6 @@ var available_component_colors = [Color.red,Color.blue,Color.green,Color.yellow,
 func getComponentColor( component : int ):
 	return available_component_colors[ component % available_component_colors.size() ]
 
-func _draw():
-	var tool_bar = get_node("../ToolBar")
-	
-	if hovered_vertex and clicked_vertex:
-		draw_line(  hovered_vertex.rect_position+hovered_vertex.rect_size*0.5 , 
-					clicked_vertex.rect_position+clicked_vertex.rect_size*0.5 , 
-					Color(1,0,0,1) , 1 , true )
-	
-	if tool_bar.find_node("show_eccentricity").pressed:
-		for vertex_name in edge_dict.keys():
-			var eccentricity = str(eccentricities[vertex_name])
-			var vertex = get_node(vertex_name)
-			draw_string( font , vertex.rect_position + Vector2(4,-2), eccentricity , Color(1,1,1,1)  )
-	if tool_bar.find_node("show_centrality").pressed:
-		for vertex_name in edge_dict.keys():
-			var c = str( centrality[vertex_name]*100.0 ).substr(0,4) + '%'
-			var vertex = get_node(vertex_name)
-			draw_string( font , vertex.rect_position + vertex.rect_size*Vector2(0,1) + Vector2(4,10), c , Color(1,1,1,1)  )
-			
-
 func _process(delta):
 	if(edge_as_springs):
 		updateSprings()
@@ -504,4 +485,24 @@ func updateSprings():
 		v.rect_position += v.speed - mean_v*int(not Input.is_mouse_button_pressed(BUTTON_LEFT))
 	
 
+
+func _draw():
+	var tool_bar = get_node("../ToolBar")
+	
+	if hovered_vertex and clicked_vertex:
+		draw_line(  hovered_vertex.rect_position+hovered_vertex.rect_size*0.5 , 
+					clicked_vertex.rect_position+clicked_vertex.rect_size*0.5 , 
+					Color(1,0,0,1) , 1 , true )
+	
+	if tool_bar.find_node("show_eccentricity").pressed:
+		for vertex_name in edge_dict.keys():
+			var eccentricity = str(eccentricities[vertex_name])
+			var vertex = get_node(vertex_name)
+			draw_string( font , vertex.rect_position + Vector2(4,-2), eccentricity , Color(1,1,1,1)  )
+	if tool_bar.find_node("show_centrality").pressed:
+		for vertex_name in edge_dict.keys():
+			var c = str( centrality[vertex_name]*100.0 ).substr(0,4) + '%'
+			var vertex = get_node(vertex_name)
+			draw_string( font , vertex.rect_position + vertex.rect_size*Vector2(0,1) + Vector2(4,10), c , Color(1,1,1,1)  )
+			
 
